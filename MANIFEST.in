@@ -1,0 +1,3 @@
+include versioneer.py
+include src/bib/_version.py
+include src/res/bib/bib.ini
