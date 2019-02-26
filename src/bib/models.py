@@ -9,16 +9,18 @@ Base = declarative_base()
 
 class FilePath(Base):
     __tablename__ = 'file_path'
+
+    id = Column(Integer, primary_key=True)
     path = Column(String)
-    file_hash_id = Column(Integer, ForeignKey('parent.id'))
+    file_hash_id = Column(Integer, ForeignKey('file_hash.id'), nullable=True)
 
 
 class FileHash(Base):
     __tablename__ = 'file_hash'
-    id = Column(Integer, primary_key=True)
 
+    id = Column(Integer, primary_key=True)
     md5 = Column(Binary(length=128))
     sha1 = Column(Binary(length=160))
     size = Column(Integer)
 
-    file_path = relationship("FilePath")
+    file_paths = relationship("FilePath")
