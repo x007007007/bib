@@ -1,7 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Binary, ForeignKey
 from sqlalchemy.orm import relationship
-
+import binascii
 
 Base = declarative_base()
 
@@ -19,8 +19,12 @@ class FileHash(Base):
     __tablename__ = 'file_hash'
 
     id = Column(Integer, primary_key=True)
-    md5 = Column(Binary(length=128))
-    sha1 = Column(Binary(length=160))
+    md5 = Column(String(length=32))
+    sha1 = Column(String(length=40))
+    ed2k = Column(String(length=32))
     size = Column(Integer)
 
-    file_paths = relationship("FilePath")
+    file_paths = relationship("FilePath",  cascade="save-update, merge, delete")
+
+    def __str__(self):
+        return f"<FileHash:{binascii.b2a_hex(self.md5)}>"

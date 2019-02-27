@@ -1,8 +1,19 @@
 import hashlib
+import magic
+
+
+class AnalysisSignal(object):
+    def __init__(self, sender, data):
+        self.sender = sender
+        self.data = data
 
 
 class AnalysisBase(object):
     is_active = True
+
+
+    def slot(self, emit):
+        self.emit = emit
 
     def name(self):
         if self.__class__.__name__.startswith("Analysis"):
@@ -19,6 +30,9 @@ class AnalysisBase(object):
     def done(self):
         raise NotImplemented
 
+    def event(self, evt):
+        pass
+
 
 class FileStreamAnalysis(object):
     def __init__(self):
@@ -27,10 +41,15 @@ class FileStreamAnalysis(object):
     def register(self, factor: AnalysisBase):
         self.factors.append(factor)
 
+    def signal_emit(self, evt):
+        for factor in self.factors:
+            factor.event(evt)
+
     def executor(self, fp):
         base_chuck_size = 9500 * 1024
         for factor in self.factors:
             factor.reset(bc_size=base_chuck_size)
+            factor.slot(self.signal_emit)
         base_chuck = fp.read(base_chuck_size)
         for factor in self.factors:
             factor.update(base_chuck)
@@ -53,7 +72,7 @@ class AnalysisMd5(AnalysisBase):
         self.hashlib.update(chuck)
 
     def done(self):
-        return self.hashlib.digest()
+        return self.hashlib.hexdigest()
 
 
 class AnalysisSha1(AnalysisMd5):
@@ -79,3 +98,16 @@ class AnalysisSize(AnalysisBase):
 
     def done(self):
         return self.size
+
+
+class AnalysisMine(AnalysisBase):
+
+    def reset(self, bc_size):
+        self.bc_size = bc_size
+
+    def update(self, chuck):
+        self.mine_type = magic.from_buffer(chuck)
+        self.emit(AnalysisSignal(self, self.mine_type))
+
+    def done(self):
+        return self.mine_type

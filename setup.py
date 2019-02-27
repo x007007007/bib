@@ -15,9 +15,6 @@ name = 'biblishelf'
 setup(
     name=name,
     version=version,
-    install_requires=[
-        "cement",
-    ],
     packages=find_packages('src'),
     package_dir={
         "": "src",
@@ -25,7 +22,7 @@ setup(
     package_data={
         "": [],
     },
-    description="a file ",
+    description="a file index manager",
     author="xingci xu",
     author_email="x007007007@hotmail.com",
     license='MIT license',
@@ -47,6 +44,9 @@ setup(
         },
     },
     setup_requires=['pytest-runner'],
+    install_requires=[
+        "python-magic",
+    ],
     tests_require=[
         'pytest',
         'coverage',

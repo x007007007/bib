@@ -7,7 +7,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Base, FilePath, FileHash
 import pkg_resources
-from .stream_engine import FileStreamAnalysis, AnalysisMd5, AnalysisEd2k, AnalysisSha1, AnalysisSize
+from .stream_engine import (
+    FileStreamAnalysis,
+    AnalysisMd5,
+    AnalysisEd2k,
+    AnalysisSha1,
+    AnalysisSize,
+    AnalysisMine,
+)
 
 
 
@@ -59,31 +66,48 @@ class BibRepo(object):
         db_uri = f'sqlite:///{db_path}'
 
         if not os.path.exists(db_path):
-            engine = create_engine(db_uri, echo=True)
+            engine = create_engine(db_uri)
             Base.metadata.create_all(engine)
         else:
-            engine = create_engine(db_uri, echo=True)
+            engine = create_engine(db_uri)
         self.Session = sessionmaker(bind=engine)
         return self.Session
 
 
     def add_resource(self, *file_paths):
-        exist_file_paths = (p for p in file_paths if os.path.exists(p) and os.path.isfile(p))
-        repo_paths = (self.get_repo_path(p) for p in exist_file_paths)
         session = self.open_db()()
 
-        session.add_all([
-            FilePath(path=repo_path) for repo_path in repo_paths
-        ])
-        session.commit()
         fsa = FileStreamAnalysis()
         fsa.register(AnalysisSize())
         fsa.register(AnalysisSha1())
         fsa.register(AnalysisEd2k())
         fsa.register(AnalysisMd5())
+        fsa.register(AnalysisMine())
 
-        for exist_file_path in exist_file_paths:
-            repo_path = self.get_repo_path(p)
-            with open(exist_file_path) as fp:
+        for exist_file_path in (p for p in file_paths if os.path.exists(p) and os.path.isfile(p)):
+            repo_rel_path = self.get_repo_path(exist_file_path)
+            file_path_o = session.query(FilePath).filter_by(
+                path=repo_rel_path
+            ).one_or_none()
+            if not file_path_o:
+                file_path_o = FilePath(path=repo_rel_path)
+                session.add(file_path_o)
+
+            with open(exist_file_path, "rb") as fp:
                 res = fsa.executor(fp)
-                print(repo_path, res)
+                file_hash_o = session.query(FileHash).filter_by(
+                    md5=res['md5'],
+                    size=res['size'],
+                    ed2k=res['ed2k'],
+                    sha1=res['sha1']
+                ).one_or_none()
+                if not file_hash_o:
+                    file_hash_o = FileHash(
+                        md5=res['md5'],
+                        size=res['size'],
+                        ed2k=res['ed2k'],
+                        sha1=res['sha1']
+                    )
+                    session.add(file_hash_o)
+                file_hash_o.file_paths.append(file_path_o)
+        session.commit()
