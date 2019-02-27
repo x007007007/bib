@@ -4,7 +4,7 @@ Public code
 import os
 import sqlalchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, aliased
 from .models import Base, FilePath, FileHash
 import pkg_resources
 from .stream_engine import (
@@ -110,4 +110,32 @@ class BibRepo(object):
                     )
                     session.add(file_hash_o)
                 file_hash_o.file_paths.append(file_path_o)
+        session.commit()
+
+    def remove_resource(self, *file_paths):
+        session = self.open_db()()
+        FilePathAF = aliased(FilePath)
+
+        for file_path in file_paths:
+            repo_rel_path = self.get_repo_path(file_path)
+            if session.query(FilePath).join(
+                FilePathAF,
+                FilePath.file_hash_id == FilePathAF.file_hash_id
+            ).filter(
+                FilePathAF.path == repo_rel_path,
+            ).filter(
+                FilePath.path != repo_rel_path
+            ).count() == 0:  # without other ref
+                fp_o = session.query(FilePath).filter_by(
+                    path=repo_rel_path
+                ).one_or_none()
+                if fp_o:
+                    session.query(FileHash).filter_by(
+                        id=fp_o.file_hash_id
+                    ).delete()
+                    session.commit()
+            session.query(FilePath).filter_by(
+                path=repo_rel_path
+            ).delete()
+            session.commit()
         session.commit()

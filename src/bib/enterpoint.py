@@ -22,6 +22,12 @@ def parse_arg():
     parser_cmd_add.add_argument('match_pattern', nargs="+")
     parser_cmd_add.set_defaults(func=cmd_add)
 
+    parser_cmd_remove = subparsers.add_parser(
+        'rm', help='remove file index from index'
+    )
+    parser_cmd_remove.add_argument('match_pattern', nargs="+")
+    parser_cmd_remove.set_defaults(func=cmd_rm)
+
     return parser
 
 def init(args):
@@ -35,6 +41,10 @@ def state(args):
 def cmd_add(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
     bib_repo.add_resource(*args.match_pattern)
+
+def cmd_rm(args):
+    bib_repo = core.BibRepo.get_bib_repo(os.curdir)
+    bib_repo.remove_resource(*args.match_pattern)
 
 def bib():
     parser = parse_arg()
