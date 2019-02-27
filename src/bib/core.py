@@ -41,7 +41,7 @@ class BibRepo(object):
 
     @classmethod
     def get_bib_repo(cls, cur_dir):
-        cur_dir_b = cur_dir.split(os.sep)
+        cur_dir_b = os.path.abspath(cur_dir).split(os.sep)
         while cur_dir_b:
             db_path = f"{os.sep.join(cur_dir_b)}{os.sep}.bib{os.sep}index.db"
             if os.path.exists(db_path):
