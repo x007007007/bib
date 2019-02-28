@@ -186,5 +186,12 @@ class BibRepo(BaseBibRepo):
         res = {
 
         }
-        res['count'] = session.query(FilePath).count()
+
+        res['index_count'] = session.query(FilePath).join(
+            FileHash
+        ).count()
+        res['unindex_count'] = session.query(FilePath).count() - res['index_count']
+        res['unique_count'] = session.query(FilePath).join(
+            FileHash
+        ).group_by(FilePath.file_hash_id).count()
         return res

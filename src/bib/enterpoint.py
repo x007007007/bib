@@ -61,7 +61,9 @@ def cmd_rm(args):
 def cmd_status(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
     res = bib_repo.status()
-    print(f"we have {res['count']} resources")
+    print(f"we have {res['index_count']} resources, "
+          f"{res['unique_count']} are unique, "
+          f"{res['unindex_count']} untracked")
 
 def cmd_check(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
