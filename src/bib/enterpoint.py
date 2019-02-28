@@ -33,6 +33,12 @@ def parse_arg():
     )
     parser_cmd_status.set_defaults(func=cmd_status)
 
+    parser_cmd_check = subparsers.add_parser(
+        'check', help='check file hash'
+    )
+    parser_cmd_check.add_argument('match_pattern', nargs="+")
+    parser_cmd_check.set_defaults(func=cmd_check)
+
     return parser
 
 def init(args):
@@ -56,6 +62,10 @@ def cmd_status(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
     res = bib_repo.status()
     print(f"we have {res['count']} resources")
+
+def cmd_check(args):
+    bib_repo = core.BibRepo.get_bib_repo(os.curdir)
+    bib_repo.check_files(*args.match_pattern)
 
 
 def bib():

@@ -12,6 +12,7 @@ class FilePath(Base):
 
     id = Column(Integer, primary_key=True)
     path = Column(String)
+    file_hash = relationship("FileHash", back_populates="file_paths")
     file_hash_id = Column(Integer, ForeignKey('file_hash.id'), nullable=True)
 
 

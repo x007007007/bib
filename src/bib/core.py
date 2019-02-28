@@ -18,7 +18,7 @@ from .stream_engine import (
 
 
 
-class BibRepo(object):
+class BaseBibRepo(object):
     """
     每一个索引仓库 ，称为一个BibRepo
 
@@ -27,6 +27,7 @@ class BibRepo(object):
 
     def __init__(self, root):
         self.root = root
+        self._init_analysis_factor()
 
     @classmethod
     def create_bib_repo(cls, repo_path):
@@ -74,42 +75,62 @@ class BibRepo(object):
         return self.Session
 
 
-    def add_resource(self, *file_paths):
-        session = self.open_db()()
-
+    def _init_analysis_factor(self):
         fsa = FileStreamAnalysis()
         fsa.register(AnalysisSize())
         fsa.register(AnalysisSha1())
         fsa.register(AnalysisEd2k())
         fsa.register(AnalysisMd5())
         fsa.register(AnalysisMine())
+        self.fsa = fsa
+
+    def analysis_file(self, file_path: str):
+        with open(file_path, "rb") as fp:
+            return self.fsa.executor(fp)
+
+
+
+
+class BibRepo(BaseBibRepo):
+    @staticmethod
+    def get_or_create(session, table, default=None, **kwargs):
+        is_created = False
+        if default is None:
+            default = {}
+        obj = session.query(table).filter_by(
+            **kwargs
+        ).one_or_none()
+        if not obj:
+            is_created = True
+            n_value = {}
+            n_value.update(default)
+            n_value.update(kwargs)
+            obj = table(**n_value)
+            session.add(obj)
+        session.commit()
+        return obj, is_created
+
+    def add_resource(self, *file_paths):
+        session = self.open_db()()
 
         for exist_file_path in (p for p in file_paths if os.path.exists(p) and os.path.isfile(p)):
             repo_rel_path = self.get_repo_path(exist_file_path)
-            file_path_o = session.query(FilePath).filter_by(
-                path=repo_rel_path
-            ).one_or_none()
-            if not file_path_o:
-                file_path_o = FilePath(path=repo_rel_path)
-                session.add(file_path_o)
 
-            with open(exist_file_path, "rb") as fp:
-                res = fsa.executor(fp)
-                file_hash_o = session.query(FileHash).filter_by(
-                    md5=res['md5'],
-                    size=res['size'],
-                    ed2k=res['ed2k'],
-                    sha1=res['sha1']
-                ).one_or_none()
-                if not file_hash_o:
-                    file_hash_o = FileHash(
-                        md5=res['md5'],
-                        size=res['size'],
-                        ed2k=res['ed2k'],
-                        sha1=res['sha1']
-                    )
-                    session.add(file_hash_o)
-                file_hash_o.file_paths.append(file_path_o)
+            fpo, is_created = self.get_or_create(session, FilePath,
+                path=repo_rel_path
+            )
+
+            res = self.analysis_file(exist_file_path)
+
+            fho, is_created = self.get_or_create(session, FileHash,
+                md5=res['md5'],
+                size=res['size'],
+                ed2k=res['ed2k'],
+                sha1=res['sha1']
+            )
+            if fpo not in fho.file_paths:
+                fho.file_paths.append(fpo)
+
         session.commit()
 
     def remove_resource(self, *file_paths):
@@ -139,6 +160,22 @@ class BibRepo(object):
             ).delete()
             session.commit()
         session.commit()
+
+    def check_files(self, *file_paths):
+        session = self.open_db()()
+        not_in_db = []
+        check_path = []
+        check_fail = []
+        for file_path in file_paths:
+            repo_rel_path = self.get_repo_path(file_path)
+            fpo = session.query(FilePath).filter_by(
+                path=repo_rel_path
+            ).one_or_none()
+            if fpo is None:
+                not_in_db.append(file_path)
+                continue
+            else:
+                pass
 
     def status(self):
         """
