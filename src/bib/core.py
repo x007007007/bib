@@ -139,3 +139,15 @@ class BibRepo(object):
             ).delete()
             session.commit()
         session.commit()
+
+    def status(self):
+        """
+        show database summary
+        :return:
+        """
+        session = self.open_db()()
+        res = {
+
+        }
+        res['count'] = session.query(FilePath).count()
+        return res

@@ -28,6 +28,11 @@ def parse_arg():
     parser_cmd_remove.add_argument('match_pattern', nargs="+")
     parser_cmd_remove.set_defaults(func=cmd_rm)
 
+    parser_cmd_status = subparsers.add_parser(
+        'status', help="show datebase status"
+    )
+    parser_cmd_status.set_defaults(func=cmd_status)
+
     return parser
 
 def init(args):
@@ -45,6 +50,13 @@ def cmd_add(args):
 def cmd_rm(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
     bib_repo.remove_resource(*args.match_pattern)
+
+
+def cmd_status(args):
+    bib_repo = core.BibRepo.get_bib_repo(os.curdir)
+    res = bib_repo.status()
+    print(f"we have {res['count']} resources")
+
 
 def bib():
     parser = parse_arg()
