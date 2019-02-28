@@ -28,4 +28,4 @@ class FileHash(Base):
     file_paths = relationship("FilePath",  cascade="save-update, merge, delete")
 
     def __str__(self):
-        return f"<FileHash:{binascii.b2a_hex(self.md5)}>"
+        return f"<FileHash:{(self.md5)}>"

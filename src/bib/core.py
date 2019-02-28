@@ -164,7 +164,7 @@ class BibRepo(BaseBibRepo):
     def check_files(self, *file_paths):
         session = self.open_db()()
         not_in_db = []
-        check_path = []
+        check_pass = []
         check_fail = []
         for file_path in file_paths:
             repo_rel_path = self.get_repo_path(file_path)
@@ -173,9 +173,21 @@ class BibRepo(BaseBibRepo):
             ).one_or_none()
             if fpo is None:
                 not_in_db.append(file_path)
-                continue
             else:
-                pass
+                res = self.analysis_file(file_path)
+                if (res['md5'] == fpo.file_hash.md5
+                    and res['sha1'] == fpo.file_hash.sha1
+                    and res['size'] == fpo.file_hash.size
+                    and res['ed2k'] == fpo.file_hash.ed2k):
+                    check_pass.append(file_path)
+                else:
+                    check_fail.append(file_path)
+
+        return {
+            'untracked': not_in_db,
+            'fail': check_fail,
+            'pass': check_pass
+        }
 
     def status(self):
         """

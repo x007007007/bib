@@ -67,7 +67,8 @@ def cmd_status(args):
 
 def cmd_check(args):
     bib_repo = core.BibRepo.get_bib_repo(os.curdir)
-    bib_repo.check_files(*args.match_pattern)
+    res = bib_repo.check_files(*args.match_pattern)
+    print(res)
 
 
 def bib():
