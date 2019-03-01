@@ -107,7 +107,7 @@ class ScanCommand(SubCommandBase, RepoCommandMixin):
     help_text = 'scan folder, automatic add, remote by rule'
 
     def handle(self, args):
-        pass
+        self.repo.scan()
 
 
 def bib():

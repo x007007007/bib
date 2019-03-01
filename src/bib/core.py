@@ -2,11 +2,9 @@
 Public code
 """
 import os
-import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, aliased
 from .models import Base, FilePath, FileHash
-import pkg_resources
 from .stream_engine import (
     FileStreamAnalysis,
     AnalysisMd5,
@@ -15,7 +13,7 @@ from .stream_engine import (
     AnalysisSize,
     AnalysisMine,
 )
-
+from .scan_rule import RuleEngine
 
 
 class BaseBibRepo(object):
@@ -110,8 +108,11 @@ class BibRepo(BaseBibRepo):
         session.commit()
         return obj, is_created
 
+    def get_seesion(self):
+        return self.open_db()()
+
     def add_resource(self, *file_paths):
-        session = self.open_db()()
+        session = self.get_seesion()
 
         for exist_file_path in (p for p in file_paths if os.path.exists(p) and os.path.isfile(p)):
             repo_rel_path = self.get_repo_path(exist_file_path)
@@ -162,7 +163,7 @@ class BibRepo(BaseBibRepo):
         session.commit()
 
     def check_files(self, *file_paths):
-        session = self.open_db()()
+        session = self.get_seesion()
         not_in_db = []
         check_pass = []
         check_fail = []
@@ -194,10 +195,8 @@ class BibRepo(BaseBibRepo):
         show database summary
         :return:
         """
-        session = self.open_db()()
-        res = {
-
-        }
+        session = self.get_seesion()
+        res = {}
 
         res['index_count'] = session.query(FilePath).join(
             FileHash
@@ -207,3 +206,16 @@ class BibRepo(BaseBibRepo):
             FileHash
         ).group_by(FilePath.file_hash_id).count()
         return res
+
+
+    def scan(self):
+        session = self.get_seesion()
+        rule = RuleEngine(os.path.join(self.root, ".bib", "bib.yml"))
+        for root, dir, files in os.walk(self.root):
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                file_size = os.path.getsize(file_path)
+                repo_path = self.get_repo_path(file_path)
+                if rule.could_index(repo_path, file_size):
+                    print(f"match {repo_path}")
+        print(rule)

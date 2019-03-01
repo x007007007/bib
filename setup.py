@@ -45,7 +45,10 @@ setup(
     },
     setup_requires=['pytest-runner'],
     install_requires=[
-        "python-magic",
+        "python-magic==0.4.15",
+        "six==1.11.0",
+        "SQLAlchemy",
+        "pyyaml==3.12",
     ],
     tests_require=[
         'pytest',
