@@ -56,7 +56,7 @@ class BaseBibRepo(object):
         abs_sys_path = os.path.abspath(sys_path)
         abs_root_path = os.path.abspath(self.root)
         if abs_sys_path.startswith(abs_root_path):
-            return abs_sys_path[len(abs_root_path):]
+            return abs_sys_path[len(abs_root_path):].lstrip("/")
         else:
             raise FileExistsError("Out of repo")
 
@@ -111,27 +111,39 @@ class BibRepo(BaseBibRepo):
     def get_seesion(self):
         return self.open_db()()
 
+    def _add_resource(self, session, repo_rel_path):
+        fpo, is_created_fpo = self.get_or_create(
+            session,
+            FilePath,
+            path=repo_rel_path
+        )
+
+        res = self.analysis_file(os.path.join(self.root, repo_rel_path))
+
+        fho, is_created_fho = self.get_or_create(
+            session,
+            FileHash,
+            md5=res['md5'],
+            size=res['size'],
+            ed2k=res['ed2k'],
+            sha1=res['sha1']
+        )
+        if fpo not in fho.file_paths:
+            fho.file_paths.append(fpo)
+        return is_created_fpo, is_created_fho
+
     def add_resource(self, *file_paths):
         session = self.get_seesion()
 
         for exist_file_path in (p for p in file_paths if os.path.exists(p) and os.path.isfile(p)):
             repo_rel_path = self.get_repo_path(exist_file_path)
-
-            fpo, is_created = self.get_or_create(session, FilePath,
-                path=repo_rel_path
-            )
-
-            res = self.analysis_file(exist_file_path)
-
-            fho, is_created = self.get_or_create(session, FileHash,
-                md5=res['md5'],
-                size=res['size'],
-                ed2k=res['ed2k'],
-                sha1=res['sha1']
-            )
-            if fpo not in fho.file_paths:
-                fho.file_paths.append(fpo)
-
+            is_created_fpo, is_created_fho = self._add_resource(session, repo_rel_path)
+            if is_created_fpo:
+                print(f"add: {repo_rel_path}")
+            elif is_created_fho:
+                print(f"scan update:{repo_rel_path}")
+            else:
+                print(f"existed:{repo_rel_path}")
         session.commit()
 
     def remove_resource(self, *file_paths):
@@ -217,5 +229,11 @@ class BibRepo(BaseBibRepo):
                 file_size = os.path.getsize(file_path)
                 repo_path = self.get_repo_path(file_path)
                 if rule.could_index(repo_path, file_size):
-                    print(f"match {repo_path}")
+                    is_created_fpo, is_created_fho = self._add_resource(session, repo_path)
+                    if is_created_fpo:
+                        print(f"scan add:{repo_path}")
+                    elif is_created_fho:
+                        print(f"scan update:{repo_path}")
+                    else:
+                        print(f"scan existed:{repo_path}")
         print(rule)

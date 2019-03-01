@@ -1,7 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Binary, ForeignKey
 from sqlalchemy.orm import relationship
-import binascii
 
 Base = declarative_base()
 
