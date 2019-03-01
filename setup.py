@@ -48,7 +48,7 @@ setup(
         "python-magic==0.4.15",
         "six==1.11.0",
         "SQLAlchemy",
-        "pyyaml==3.12",
+        "pyyaml>=4.2b1",
     ],
     tests_require=[
         'pytest',
